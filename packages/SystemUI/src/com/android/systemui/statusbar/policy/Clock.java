@@ -34,6 +34,8 @@ import android.text.style.RelativeSizeSpan;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.TextView;
+import android.graphics.Color;
+import android.os.Environment;
 
 import com.android.systemui.DemoMode;
 
@@ -47,10 +49,15 @@ import java.util.TimeZone;
 import libcore.icu.ICU;
 import libcore.icu.LocaleData;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
 /**
  * Digital clock for the status bar.
  */
 public class Clock extends TextView implements DemoMode {
+    private static final String TAG = "StatusBar.Clock";
     private boolean mAttached;
     private Calendar mCalendar;
     private String mClockFormatString;
@@ -96,6 +103,13 @@ public class Clock extends TextView implements DemoMode {
     };
     private int mClockColor;
 
+    public static final String THEME_DIRECTORY = "/theme/notification/";
+    public static final String CONFIGURATION_FILE = "notification.conf";
+    public static final String CLOCK_COLOR = "color.clock";
+    private final String mFilePath;
+    private Properties prop;
+    private String mColor = null;
+
     public Clock(Context context) {
         this(context, null);
     }
@@ -106,6 +120,19 @@ public class Clock extends TextView implements DemoMode {
 
     public Clock(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        mFilePath = Environment.getDataDirectory() + THEME_DIRECTORY + CONFIGURATION_FILE;
+        loadConf(mFilePath, CLOCK_COLOR);
+    }
+
+    private void loadConf(String filePath, String propertyName) {
+        prop = new Properties();
+        try {
+            prop.load(new FileInputStream(filePath));
+            mColor = prop.getProperty(propertyName);
+        } catch (IOException e) {
+            mColor = null;
+            return;
+        }
     }
 
     @Override
@@ -184,6 +211,10 @@ public class Clock extends TextView implements DemoMode {
     final void updateClock() {
         if (mDemoMode) return;
         mCalendar.setTimeInMillis(System.currentTimeMillis());
+        if(null != mColor) {
+            int color = (int)(Long.parseLong(mColor, 16));
+            setTextColor(color);
+        }
         setText(getSmallTime());
     }
 

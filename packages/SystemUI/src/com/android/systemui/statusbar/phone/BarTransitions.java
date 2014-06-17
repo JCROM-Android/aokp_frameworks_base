@@ -31,6 +31,17 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
+import android.os.SystemProperties;
+import java.io.File;
+import android.content.Context;
+import android.widget.ImageView;
+import android.widget.FrameLayout;
+import android.os.Environment;
+import android.view.Display;
+import android.view.WindowManager;
+import android.view.Surface;
+import android.graphics.drawable.ColorDrawable;
+
 import com.android.systemui.R;
 
 public class BarTransitions {
@@ -43,18 +54,20 @@ public class BarTransitions {
     public static final int MODE_SEMI_TRANSPARENT = 1;
     public static final int MODE_TRANSLUCENT = 2;
     public static final int MODE_LIGHTS_OUT = 3;
+    public static final int MODE_INIT = -1;
 
     public static final int LIGHTS_IN_DURATION = 250;
     public static final int LIGHTS_OUT_DURATION = 750;
     public static final int BACKGROUND_DURATION = 200;
 
-    private final String mTag;
-    private final View mView;
-    private final BarBackgroundDrawable mBarBackground;
+    private String mTag;
+    private View mView;
+    private boolean mSupportsTransitions = ActivityManager.isHighEndGfx();
+    private BarBackgroundDrawable mBarBackground;
 
     private int mMode;
 
-    public BarTransitions(View view, int gradientResourceId) {
+    public void initBarTransitions(View view, int gradientResourceId) {
         mTag = "BarTransitions." + view.getClass().getSimpleName();
         mView = view;
         mBarBackground = new BarBackgroundDrawable(mView.getContext(), gradientResourceId);
@@ -63,8 +76,16 @@ public class BarTransitions {
         }
     }
 
+    public BarTransitions(View view, int gradientResourceId) {
+        initBarTransitions(view, gradientResourceId);
+    }
+
     public int getMode() {
         return mMode;
+    }
+
+    public void refresh(int mode, boolean animate) {
+        transitionTo(mode, animate);
     }
 
     public void transitionTo(int mode, boolean animate) {
@@ -97,6 +118,7 @@ public class BarTransitions {
         if (mode == MODE_SEMI_TRANSPARENT) return "MODE_SEMI_TRANSPARENT";
         if (mode == MODE_TRANSLUCENT) return "MODE_TRANSLUCENT";
         if (mode == MODE_LIGHTS_OUT) return "MODE_LIGHTS_OUT";
+        if ((DEBUG) && (mode == MODE_INIT)) return "MODE_INIT";
         throw new IllegalArgumentException("Unknown mode " + mode);
     }
 
@@ -109,10 +131,10 @@ public class BarTransitions {
     }
 
     private static class BarBackgroundDrawable extends Drawable {
-        private final int mOpaque;
-        private final int mSemiTransparent;
-        private final Drawable mGradient;
-        private final TimeInterpolator mInterpolator;
+        private int mOpaque;
+        private int mSemiTransparent;
+        private Drawable mGradient;
+        private TimeInterpolator mInterpolator;
 
         private int mMode = -1;
         private boolean mAnimating;
@@ -134,7 +156,12 @@ public class BarTransitions {
                 mOpaque = res.getColor(R.color.system_bar_background_opaque);
                 mSemiTransparent = res.getColor(R.color.system_bar_background_semi_transparent);
             }
-            mGradient = res.getDrawable(gradientResourceId);
+            String gradientStr = SystemProperties.get("persist.sys.prop.gradient");
+            if(!gradientStr.equals("true")) {
+                mGradient = res.getDrawable(gradientResourceId);
+            } else {
+                mGradient = new ColorDrawable(res.getColor(R.color.system_bar_background_transparent));
+            }
             mInterpolator = new LinearInterpolator();
         }
 
@@ -222,4 +249,43 @@ public class BarTransitions {
             }
         }
     }
+
+    protected Drawable getDrawableFromFile(String DIR, String MY_FILE_NAME) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(Environment.getDataDirectory().toString() + "/theme/"+DIR+"/");
+        builder.append(File.separator);
+        builder.append(MY_FILE_NAME);
+        String filePath = builder.toString();
+        String extension = checkThemeFile(filePath);
+        if(extension != null) {
+            return Drawable.createFromPath(filePath + extension);
+        }else {
+            return null;
+        }
+    }
+
+    private String checkThemeFile(String filename) {
+        String extension = null;
+        File file = null;
+
+        file = new File(filename + ".png");
+        if(file.exists()) {
+            extension = ".png";
+        }else {
+            file = new File(filename + ".jpg");
+            if(file.exists()) {
+                extension = ".jpg";
+            }
+        }
+
+        return extension;
+    }
+
+    protected boolean requiresRotation() {
+        WindowManager wm = (WindowManager) mView.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display dp = wm.getDefaultDisplay();
+
+        return dp.getRotation()==Surface.ROTATION_90 || dp.getRotation()==Surface.ROTATION_270;
+    }
+
 }
