@@ -52,6 +52,13 @@ import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityManager.TouchExplorationStateChangeListener;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+
+import android.os.SystemProperties;
+import java.io.File;
+import android.graphics.drawable.Drawable;
+import android.widget.ImageView;
+import android.widget.FrameLayout;
+import android.os.Environment;
 import android.widget.Space;
 import com.android.internal.util.aokp.AwesomeConstants.AwesomeConstant;
 import com.android.systemui.R;

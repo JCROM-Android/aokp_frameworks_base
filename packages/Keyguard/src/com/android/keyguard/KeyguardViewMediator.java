@@ -930,6 +930,13 @@ public class KeyguardViewMediator {
             return;
         }
 
+        String rotation = SystemProperties.get("persist.sys.theme.lock");
+        if (rotation.equals("true")) {
+            if (DEBUG) Log.d(TAG, "doKeyguard: not showing because during jcrom's theme changing.");
+            handleKeyguardDone(true, true);
+            return;
+        }
+
         if (DEBUG) Log.d(TAG, "doKeyguard: showing the lock screen");
         showLocked(options);
     }

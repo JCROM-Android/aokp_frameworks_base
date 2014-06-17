@@ -117,6 +117,7 @@ public class KeyguardViewManager {
     private int mBlurRadius = 12;
     private boolean mSeeThrough = false;
     private boolean mIsCoverflow = true;
+    private static final String LOCKSCREEN_ROTATE_PROPERTY = "persist.sys.lockscreen.rotate";
 
     private KeyguardUpdateMonitorCallback mBackgroundChanger = new KeyguardUpdateMonitorCallback() {
         @Override
@@ -260,17 +261,20 @@ public class KeyguardViewManager {
 
     private boolean shouldEnableScreenRotation() {
         Resources res = mContext.getResources();
-    boolean enableLockScreenRotation = Settings.AOKP.getInt(mContext.getContentResolver(),
+        boolean enableLockScreenRotation = Settings.AOKP.getInt(mContext.getContentResolver(),
                 Settings.AOKP.LOCKSCREEN_ROTATION, 0) != 0;
-    boolean enableAccelerometerRotation = Settings.System.getInt(mContext.getContentResolver(),
+        boolean enableAccelerometerRotation = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.ACCELEROMETER_ROTATION, 1) != 0;
+        String rotation = SystemProperties.get(LOCKSCREEN_ROTATE_PROPERTY);
         return SystemProperties.getBoolean("lockscreen.rot_override",false)
-                || (enableLockScreenRotation && enableAccelerometerRotation);
+                || (enableLockScreenRotation && enableAccelerometerRotation)
+                || rotation.equals("true");
     }
 
     private boolean shouldEnableTranslucentDecor() {
         Resources res = mContext.getResources();
-        return res.getBoolean(R.bool.config_enableLockScreenTranslucentDecor);
+        return SystemProperties.getBoolean("persist.sys.full.lockscreen",
+            res.getBoolean(R.bool.config_enableLockScreenTranslucentDecor));
     }
 
     private void setCustomBackground(Bitmap bmp) {

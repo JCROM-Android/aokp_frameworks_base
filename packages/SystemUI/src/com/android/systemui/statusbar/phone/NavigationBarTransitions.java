@@ -29,6 +29,12 @@ import com.android.internal.util.aokp.AwesomeConstants.AwesomeConstant;
 import com.android.systemui.R;
 import com.android.systemui.statusbar.policy.KeyButtonView;
 
+import android.os.SystemProperties;
+import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ColorDrawable;
+import android.util.Log;
+
 public final class NavigationBarTransitions extends BarTransitions {
 
     private static final float KEYGUARD_QUIESCENT_ALPHA = 0.5f;
@@ -59,20 +65,47 @@ public final class NavigationBarTransitions extends BarTransitions {
         transitionTo(mRequestedMode, false /*animate*/);
     }
 
+    public void transitionJcrom(int mode, boolean animate, boolean transition) {
+        if(null == mView) {
+            return;
+        }
+        String forceHobby = SystemProperties.get("persist.sys.force.hobby");
+        if(!(forceHobby.equals("true"))) {
+            return;
+        }
+
+        if(mode == MODE_TRANSLUCENT) {
+            Resources res = mView.getContext().getResources();
+            ColorDrawable transColorDrawable = new ColorDrawable(res.getColor(R.color.system_bar_background_transparent));
+            mView.setBackgroundDrawable((Drawable)transColorDrawable);        
+            if(transition) {
+                transitionTo(mode, animate);
+            }
+        }else {
+            Drawable drawable = null;
+            if(requiresRotation()) {
+                drawable = getDrawableFromFile("navibar", "navibar_background_land");
+            }else {
+                drawable = getDrawableFromFile("navibar", "navibar_background_port");
+            }
+            if(drawable != null) {
+                mView.setBackgroundDrawable(drawable);
+            }
+        }
+    }
+
     @Override
     public void transitionTo(int mode, boolean animate) {
         mRequestedMode = mode;
-        if (mVertical && mode == MODE_TRANSLUCENT) {
-            // translucent mode not allowed when vertical
-            mode = MODE_OPAQUE;
-        }
         super.transitionTo(mode, animate);
+        transitionJcrom(mode, animate, false);
     }
 
     @Override
     protected void onTransition(int oldMode, int newMode, boolean animate) {
         super.onTransition(oldMode, newMode, animate);
         applyMode(newMode, animate, false /*force*/);
+        transitionJcrom(newMode, animate, true);
     }
 
     private void applyMode(int mode, boolean animate, boolean force) {
@@ -99,7 +132,11 @@ public final class NavigationBarTransitions extends BarTransitions {
     }
 
     private float alphaForMode(int mode) {
-        final boolean isOpaque = mode == MODE_OPAQUE || mode == MODE_LIGHTS_OUT;
+        boolean isOpaque = mode == MODE_OPAQUE || mode == MODE_LIGHTS_OUT;
+        String alphaNavikey = SystemProperties.get("persist.sys.alpha.navikey");
+        if((alphaNavikey.equals("true"))) {
+            isOpaque = false;
+        }
         return isOpaque ? KeyButtonView.DEFAULT_QUIESCENT_ALPHA : 1f;
     }
 
